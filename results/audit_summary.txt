@@ -1,0 +1,53 @@
+--------------------------------------------------------------------------
+DATA AUDIT — MIT-BIH Arrhythmia Database
+--------------------------------------------------------------------------
+records audited        : 44  (22 DS1 + 22 DS2)
+non-beat annotations dropped : 2,991   (rhythm '+', quality '~', artefact '|', …)
+
+--------------------------------------------------------------------------
+1. CLASS MAPPING CHECK
+--------------------------------------------------------------------------
+split   class      ours   expected     diff    
+DS1         N    45,866     45,800      +66     ok
+DS1         S       944        950       -6     ok
+DS1         V     3,788      3,780       +8     ok
+DS1         F       415        415       +0     ok
+DS2         N    44,259     44,200      +59     ok
+DS2         S     1,837      1,840       -3     ok
+DS2         V     3,221      3,220       +1     ok
+DS2         F       388        390       -2     ok
+
+No unmapped beat symbols. Every beat annotation fell into N/S/V/F/Q.
+Q beats (paced / unclassifiable) excluded from the 4-class task: 15
+
+--------------------------------------------------------------------------
+2. LEAD AVAILABILITY
+--------------------------------------------------------------------------
+preferred lead: MLII
+Every audited record provides the preferred lead. No substitutions.
+
+channel orders present:
+   MLII | V1              x38  
+   MLII | V5              x2   100 123
+   MLII | V2              x2   103 117
+   V5 | MLII              x1   114
+   MLII | V4              x1   124
+Note: channel order is NOT uniform — this is why the loader selects by name.
+
+--------------------------------------------------------------------------
+3. MINORITY-CLASS CONCENTRATION
+--------------------------------------------------------------------------
+DS1  class S: 944 beats across 16/22 records; top 4 records hold 76%
+        209:383  201:128  207:107  118:96
+DS2  class S: 1,837 beats across 16/22 records; top 4 records hold 92%
+        232:1382  222:209  202:55  234:50
+DS1  class F: 415 beats across 10/22 records; top 4 records hold 97%
+        208:373  223:14  205:11  124:5
+DS2  class F: 388 beats across 7/22 records; top 4 records hold 99%
+        213:362  233:11  210:10  200:2
+
+   Full per-record counts are in results/beat_counts.csv.
+
+==========================================================================
+Result: mapping looks correct — safe to build on.
+==========================================================================

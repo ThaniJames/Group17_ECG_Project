@@ -1,0 +1,61 @@
+#Data preparation configuration 
+
+reproducibility:
+  seed: 20260924              # one seed for the whole project
+  wfdb_version: "4.3.1"
+
+data:
+  database: mitdb             # MIT-BIH Arrhythmia Database
+  local_dir: data/mitdb
+  fs_original: 360            # Hz, as recorded
+
+
+  # Inter-patient split (de Chazal). Records 102/104/107/217 are absent
+  # from both lists: they are paced, and excluded by the brief.
+  ds1: [101, 106, 108, 109, 112, 114, 115, 116, 118, 119, 122, 124,
+        201, 203, 205, 207, 208, 209, 215, 220, 223, 230]
+  ds2: [100, 103, 105, 111, 113, 117, 121, 123, 200, 202, 210, 212,
+        213, 214, 219, 221, 222, 228, 231, 232, 233, 234]
+
+  val: [223, 124, 201, 106, 112]
+
+lead:
+  # selected BY NAME, never by channel index
+  preferred: MLII
+  # documented substitution order             
+  fallback: [V5, V2, V1, V4]  
+
+filtering:
+  # baseline wander                   
+  highpass_hz: 0.5
+  # US mains (MIT-BIH was recorded in Boston)            
+  notch_hz: 60                
+  notch_q: 30
+  # EMG / muscle artefact; also the anti-alias filter
+  lowpass_hz: 40             
+  order: 3
+  # NOT filtfilt - Can see both past and future. As lfilter is kind of steaming can not change anything on past and future.                    
+  method: lfilter             
+
+resample:
+  # Hz. Halves data memory; 40 Hz content is preserved.
+  fs_target: 180              
+  method: decimate
+  group_delay_samples: 8
+
+normalisation:
+  method: robust_per_record
+  scale_percentile: 99.5
+  # safety net: never triggers on clean ECG (max 2.1)
+  clip: 4.0                   
+
+segmentation:
+  # 0.267 s before the R-peak
+  pre: 48 
+  # 0.444 s after                    
+  post: 80                    
+  length: 128
+
+rr:
+  # beats used for the running local RR median.  
+  local_window: 4             
