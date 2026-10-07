@@ -1,9 +1,11 @@
+
 """Run the pipeline over all 44 records and verify the totals
 and make sure we are not loosing lots of data from the original data"""
 import sys, time; sys.path.insert(0, 'src')
 import numpy as np, pandas as pd
-from io_utils import CFG, CLASSES
+from io_utils import CFG, CLASSES, ensure_database
 from prepare_data import prepare_all
+ensure_database()  # cache the 44 records locally so re-runs don't re-stream from PhysioNet
 t0 = time.perf_counter()
 res = prepare_all()
 d, rows = res["data"], pd.DataFrame(res["per_record"])
