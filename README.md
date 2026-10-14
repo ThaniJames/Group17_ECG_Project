@@ -24,8 +24,8 @@ bash run.sh
 `run.sh` creates `.venv`, installs [`requirements.txt`](requirements.txt), and runs the data preparation
 below. Requirements:
 
-- **Python 3.14.** The pinned versions in `requirements.txt` only support it, and `run.sh` stops with
-  an error if it cannot find it.
+- **Python 3.12 or newer.** `numpy` and `scipy` require 3.12; `run.sh` stops with an error if it
+  cannot find a suitable interpreter.
 - **bash.** On Windows use Git Bash.
 - **Internet access** on the first run, for the packages and the PhysioNet data.
 
