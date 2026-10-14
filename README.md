@@ -18,20 +18,34 @@ preparation. No model results are included at this stage.
 ## Setup
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+bash run.sh
 ```
 
-Python 3.14 with the pinned versions in [`requirements.txt`](requirements.txt).
+`run.sh` creates `.venv`, installs [`requirements.txt`](requirements.txt), and runs the data preparation
+below. Requirements:
+
+- **Python 3.12 or newer.** `numpy` and `scipy` require 3.12; `run.sh` stops with an error if it
+  cannot find a suitable interpreter.
+- **bash.** On Windows use Git Bash.
+- **Internet access** on the first run, for the packages and the PhysioNet data.
+
+Without bash (Windows PowerShell):
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe scripts\run_prepare.py
+```
+
 
 ## Reproducing the preprocessing
 
 ```bash
-.venv/bin/python scripts/run_prepare.py      # or: ./run.sh
+bash run.sh                                  # or: .venv/bin/python scripts/run_prepare.py
 ```
 
-Run it from the project root. It takes about 90 seconds to 2 mins the first time, because it downloads
-90 MB from PhysioNet into `data/`, and a few seconds on every run after that.
+The first run takes a few minutes, because it installs the packages (torch is large) and downloads
+about 90 MB from PhysioNet into `data/`. Every run after that takes a few seconds.
 
 The script:
 
@@ -171,7 +185,7 @@ scripts/         run_prepare.py · verify_alignment.py
 results/         generated statistics
 figures/         generated figures
 data/            PhysioNet data and processed arrays — not included, see above
-run.sh           convenience wrapper around scripts/run_prepare.py
+run.sh           sets up .venv, then runs scripts/run_prepare.py
 ```
 
 `data/` and `.venv/` are excluded by [`.gitignore`](.gitignore). The project brief does not permit
