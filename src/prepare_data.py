@@ -94,7 +94,7 @@ def prepare_record(record_id: str | int) -> dict:
     """Full pipeline for one record. Returns arrays ready to concatenate."""
     fs_in = CFG["data"]["fs_original"]
     fs_out = CFG["resample"]["fs_target"]
-    pre, post = CFG["segmentation"]["pre"], CFG["segmentation"]["post"]
+    pre, post = CFG["segmentation"]["store_pre"], CFG["segmentation"]["store_post"]
     rec = load_record(record_id, keep_q=True)
     x = normalise(resample_signal(filter_signal(rec.signal, fs_in), fs_in, fs_out))
     rr_prev, rr_next, rr_local, rr_ok = compute_rr(rec.r_peaks, fs_in)

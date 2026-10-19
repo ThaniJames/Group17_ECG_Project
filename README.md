@@ -3,15 +3,14 @@
 **Group 17.** Four-class heartbeat classification (N / S / V / F) with a compact 1D CNN designed
 for the Analog Devices MAX78002 Edge-AI accelerator, following CRISP-DM.
 
-This submission covers CRISP-DM stages 1–3 — business understanding, data understanding and data
-preparation. No model results are included at this stage.
-
 | | |
 |---|---|
-| Report | [`report.pdf`](report.pdf) — stages 1–3 |
+| Report | [`report.pdf`](report.pdf) |
 | Exploratory analysis | [`notebooks/EDA.ipynb`](notebooks/EDA.ipynb) |
-| Data preparation code | [`src/`](src/), [`scripts/`](scripts/) |
+| Data preparation | [`src/prepare_data.py`](src/prepare_data.py), [`scripts/run_prepare.py`](scripts/run_prepare.py) |
+| Model and training | [`src/model.py`](src/model.py), [`src/train.py`](src/train.py) |
 | Generated statistics | [`results/`](results/) |
+| Training runs | [`results/runs/`](results/runs/) |
 
 ---
 
@@ -83,6 +82,99 @@ rather than run directly.
 
 ---
 
+## Training
+
+```bash
+.venv/bin/python src/model.py                        # layer tables for every arm, no training
+.venv/bin/python src/dataset.py                      # shapes, class counts, class weights
+.venv/bin/python src/train.py --arm B2 --seed 20260906   # one run, about a minute
+.venv/bin/python src/train.py --all                  # the full ablation, 4 arms x 5 seeds, ~12 min
+```
+
+`src/train.py` **never loads the test split.** DS2 is evaluated once, on a frozen model, by
+`src/evaluate.py` — not here.
+
+### The four input arms
+
+The same architecture trained on four views of the same beats, so the comparison isolates the input
+representation. S beats are defined by *prematurity* — a property of the rhythm, not the waveform —
+so a single-beat window cannot contain the evidence needed to identify one.
+
+| arm | input | what it tests |
+|---|---|---|
+| A | 1 × 128 — the beat alone | control: morphology only, rhythm-blind by construction |
+| B | 1 × 256 — a longer window | prematurity visible as geometry |
+| B2 | 1 × 256, pooled once more | **selected** — arm B off the MAX78002 FC ceiling |
+| C | 5 × 128 — beat + 4 RR ratios | prematurity supplied as explicit features |
+
+Arms are defined in [`configs/model.yaml`](configs/model.yaml). An arm may override individual
+architecture keys; B2 uses this to pool once more, which is why its flatten is 512 rather than 1024.
+
+### Results on the validation split
+
+| arm | macro-F1 (N/S/V) | S recall | accuracy | parameters | flatten |
+|---|---|---|---|---|---|
+| A | 0.615 ±0.031 | 0.091 | 0.911 | 35,588 | 512 |
+| B | 0.721 ±0.011 | 0.277 | 0.950 | 37,636 | 1024 — at the limit |
+| **B2** | **0.717 ±0.015** | **0.275** | **0.951** | **35,588** | **512** |
+| C | 0.670 ±0.008 | 0.440 | 0.906 | 35,908 | 512 |
+
+Mean ± standard deviation over five seeds. Runs are deterministic: re-running `--all` reproduces
+these figures exactly, not approximately.
+
+**B2 is the selected model.** B and B2 are statistically indistinguishable (paired t-test over
+matched seeds, p = 0.46), so the selection metric cannot separate them; the MAX78002 flatten limit
+of 1024 breaks the tie. Arm C's higher S recall comes from predicting S 3.2× more often than S
+occurs — it sits on B2's own precision–recall curve rather than above it.
+
+### The selected architecture
+
+```
+input 1 x 256                                           (1.42 s at 180 Hz)
+ 1  Conv1d  1->16  k=5 p=2, ReLU                16 x 256         96
+ 2  MaxPool2 -> Conv1d 16->32  k=5 p=2, ReLU    32 x 128      2,592
+ 3  MaxPool2 -> Conv1d 32->64  k=5 p=2, ReLU    64 x  64     10,304
+ 4  MaxPool2 -> Conv1d 64->64  k=5 p=2, ReLU    64 x  32     20,544
+ 5  MaxPool4 -> Flatten -> Linear 512->4               4      2,052
+                                                   TOTAL     35,588
+```
+
+35 KiB of the 2,340 KiB weight budget (1.5 %). Four hardware rules shape the design, and
+`src/model.py` raises an error rather than building a model that breaks them: conv stride is fixed
+at 1 so pooling does all downsampling, pooling precedes the convolution, ReLU is the only
+activation, and the flattened vector must be ≤ 1024. There is no softmax layer — `CrossEntropyLoss`
+applies it internally and the chip predicts with argmax over the raw logits.
+
+### What each run writes
+
+```
+results/runs/<arm>_<seed>/
+    best.pt        checkpoint at the best validation macro-F1(N/S/V)
+    history.json   per-epoch loss, validation metrics, learning rate
+    report.txt     per-class precision/recall/F1 and the confusion matrix
+    run.json       the full configuration, environment and validation metrics
+```
+
+`run.json` records the exact config used, so a result can always be traced back to the settings
+that produced it.
+
+### Cross-validation and the class-weight sweep
+
+```
+results/cv2/     5-fold cross-validation inside DS1, arm B2 (folds balanced by record count,
+                 then by S count) + per_record.json, the per-patient breakdown
+results/sweep/   class_weight_cap swept over 20 / 40 / 60 / 93
+```
+
+Cross-validation exists because the single validation split rests on five patients. Pooled over all
+943 DS1 S beats, S recall is **0.455 ±0.029**; restricted to the seven patients with 30 or more S
+beats, it is **0.266 ±0.294**, and across those seven it ranges from 0.000 to 0.786 — two patients
+with 106 and 73 S beats are missed entirely. S detection is strongly patient-dependent, and
+`results/cv2/per_record.json` has the full table. Patients with only a handful of S beats are
+excluded from that figure because a recall of 0 or 1 out of 2 carries no information.
+
+---
+
 ## Changing the train/validation split
 
 Edit one line in [`configs/prep.yaml`](configs/prep.yaml):
@@ -108,13 +200,24 @@ No other file needs editing — every script reads this list at startup.
 import numpy as np
 d = np.load("data/processed/beats.npz", allow_pickle=False)
 
-d["windows"]    # (100630, 128) float32 — 48 samples before the R-peak, 80 after, at 180 Hz
-d["labels"]     # (100630,)     int8    — 0=N 1=S 2=V 3=F
-d["record"]     # (100630,)     int16   — which patient each beat came from
-d["subset"]     # (100630,)             — 'train' | 'val' | 'test'
+d["windows"]    # (100622, 256) float32 — 96 samples before the R-peak, 160 after, at 180 Hz
+d["labels"]     # (100622,)     int8    — 0=N 1=S 2=V 3=F
+d["record"]     # (100622,)     int16   — which patient each beat came from
+d["subset"]     # (100622,)             — 'train' | 'val' | 'test'
+d["is_ds1"]     # (100622,)     bool
 d["rr_prev"]    # seconds, float32 — gap to the previous beat
 d["rr_next"]    # seconds, float32 — gap to the next beat
 d["rr_local"]   # seconds, float32 — median of the previous 4 gaps
+```
+
+**The stored window is 256 samples; the network input is a centred slice of it.** Storing wide
+means the long-window arm and the time-shift augmentation both use real recorded signal rather than
+padding, and no arm requires re-running preprocessing. The 128-sample input is `x[48:176]`.
+`src/dataset.py` does the slicing — prefer it over reading the file directly:
+
+```python
+from dataset import load_beats, make_loaders
+loaders = make_loaders("B2", seed=20260906)   # train / val / test DataLoaders for one arm
 ```
 
 Every beat keeps its record number, so the data can be re-split without re-running preprocessing.
@@ -125,14 +228,20 @@ Every beat keeps its record number, so the data can be re-split without re-runni
 
 | Split | Records | N | S | V | F | Total |
 |---|---|---|---|---|---|---|
-| Train | 17 | 36,574 | 709 | 2,550 | 393 | 40,226 |
+| Train | 17 | 36,571 | 709 | 2,550 | 393 | 40,223 |
 | Validation | 5 | 9,250 | 234 | 1,238 | 21 | 10,743 |
-| Test (DS2) | 22 | 44,218 | 1,836 | 3,219 | 388 | 49,661 |
-| **Total** | **44** | **90,042** | **2,779** | **7,007** | **802** | **100,630** |
+| Test (DS2) | 22 | 44,213 | 1,836 | 3,219 | 388 | 49,656 |
+| **Total** | **44** | **90,034** | **2,779** | **7,007** | **802** | **100,622** |
 
 Records are patients; no patient appears in more than one split. Of 100,718 beats in the four
-target classes, 100,630 were extracted and 88 dropped (0.087 %) — the first and last beat of each
-recording, which have no neighbour on one side and therefore no measurable RR interval.
+target classes, 100,622 were extracted and 96 dropped (0.095 %) — beats too close to the start or
+end of a recording to fill the stored window, or with no neighbour on one side and therefore no
+measurable RR interval.
+
+The classes are severely imbalanced, and unevenly spread across patients. One DS1 record (209)
+holds 41 % of its S beats; one DS2 record (232) holds 75 % of the test set's. Aggregate per-beat
+metrics are therefore dominated by a small number of patients, which is why per-class and
+per-record figures are reported alongside them.
 
 Full detail in report section 3.8.
 
@@ -140,10 +249,13 @@ Full detail in report section 3.8.
 
 ## Conventions
 
-Every configurable value lives in [`configs/prep.yaml`](configs/prep.yaml): the random seed, the
-DS1/DS2 record lists, lead preference and fallback order, filter cutoffs, resampling target,
-group-delay compensation, normalisation parameters, window lengths and the RR window. Nothing is
-hard-coded in the source.
+Every configurable value lives in [`configs/prep.yaml`](configs/prep.yaml) (data) and
+[`configs/model.yaml`](configs/model.yaml) (modelling): the random seed, the DS1/DS2 record lists,
+lead preference and fallback order, filter cutoffs, resampling target, group-delay compensation,
+normalisation parameters, window lengths, the RR window, the input arms, the architecture, every
+training hyperparameter and the seed list. Nothing is hard-coded in the source.
+
+The two files are kept separate so a modelling change can never invalidate the prepared dataset.
 
 All record loading goes through `src.io_utils.load_record()`:
 
@@ -171,25 +283,35 @@ Three rules are enforced in code, each of which would silently corrupt results i
   the future and cannot run on a device classifying a live signal. The cost is a measured 8-sample
   group delay, which `rescale_peaks()` compensates before windowing.
 
+Two more apply to modelling:
+
+- **Model selection uses macro-F1 over N/S/V only.** The validation split holds 21 F beats, far too
+  few for a stable F1 — including it would make selection follow noise. F is reported everywhere.
+- **The metric definitions live in one place.** `src/metrics.py` is imported by both training and
+  evaluation, so a macro-F1 quoted in report section 4.4 means exactly the same thing as one in 5.1.
+
 ---
 
 ## Repository layout
 
 ```
-report.pdf       CRISP-DM report, stages 1–3
+report.pdf       CRISP-DM report
 reports/         the report sections as written by each member
 notebooks/       EDA.ipynb — exploratory data analysis (report section 2)
-configs/         prep.yaml — the shared configuration
+configs/         prep.yaml (data) · model.yaml (arms, architecture, training)
 src/             io_utils.py (loader) · prepare_data.py (pipeline) · data_audit.py (audit)
+                 dataset.py (input arms) · model.py (EdgeCNN) · metrics.py · train.py
+                 evaluate.py · noise_test.py
 scripts/         run_prepare.py · verify_alignment.py
-results/         generated statistics
+results/         generated statistics · runs/ (ablation) · cv2/ (cross-validation) · sweep/
 figures/         generated figures
 data/            PhysioNet data and processed arrays — not included, see above
 run.sh           sets up .venv, then runs scripts/run_prepare.py
 ```
 
-`data/` and `.venv/` are excluded by [`.gitignore`](.gitignore). The project brief does not permit
-submitting the raw PhysioNet datasets, and both are regenerated by the commands above.
+`data/`, `.venv/` and `__pycache__/` are excluded by [`.gitignore`](.gitignore). The project brief
+does not permit submitting the raw PhysioNet datasets, and both are regenerated by the commands
+above.
 
 ---
 
@@ -198,7 +320,7 @@ submitting the raw PhysioNet datasets, and both are regenerated by the commands 
 - Beats from one recording never span train and test — the split is **by record**, following the
   inter-patient partition of de Chazal et al. (2004).
 - **DS2 is evaluated once per submission**, on a frozen model, and is never used for model
-  selection.
+  selection. `src/train.py` does not load it.
 - Accuracy is never reported alone; macro-F1 and per-class metrics are required.
 - No claim of clinical validation is made, and no MAX78002 hardware measurement is claimed —
   no physical board was used.

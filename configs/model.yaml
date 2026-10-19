@@ -1,0 +1,92 @@
+# Modelling Configuration
+
+arms:
+  # control — rhythm-blind by construction
+  A:
+    channels: 1
+    length: 128
+    slice: true
+  # prematurity becomes visible geometry
+  B:
+    channels: 1
+    length: 256
+    slice: false
+  # prematurity supplied as constant channels 1 ECG + 4 RR
+  C:
+    channels: 5
+    length: 128
+    slice: true
+  # arm B pooled once more: flatten 1024 -> 512, off the MAX78002 FC ceiling.
+  # Conv cost is unchanged; only the classifier width shrinks.
+  B2:
+    channels: 1
+    length: 256
+    slice: false
+    architecture:
+      final_pool: 4
+
+rr_features:
+  clip_min: 0.4
+  clip_max: 1.6
+  channels:
+    # prematurity   — short for an S beat
+    - rr_prev / rr_local
+    # compensatory pause — long after an S beat
+    - rr_next / rr_local
+    # patient heart-rate normalisation
+    - rr_local / rr_record
+    # local asymmetry
+    - rr_prev / rr_next
+
+architecture:
+  kernel_size: 5
+  padding: 2
+  blocks:
+    # [out_channels, pool_before_conv]
+    - [16, 0]
+    - [32, 2]
+    - [64, 2]
+    - [64, 2]
+  final_pool: 2
+  n_classes: 4
+
+training:
+  optimizer: adam
+  lr: 0.001
+  lr_schedule: cosine
+  batch_size: 256
+  max_epochs: 100
+  early_stopping_patience: 15
+
+  loss: weighted_cross_entropy
+  class_weight: inverse_frequency
+  class_weight_cap: 20
+
+  selection_metric: macro_f1_nsv
+
+  seeds: [20260906, 20260907, 20260908, 20260909, 20260910]
+
+augmentation:
+  amplitude_scale: [0.9, 1.1]
+  time_shift_samples: 4
+  p_apply: 0.5
+
+noise:
+  database: nstdb
+  local_dir: data/nstdb
+  records: [bw, em, ma]
+
+  augment_half: first
+  augment_channel: noise1
+  eval_half: second
+  eval_channel: noise2
+  snr_db_eval: [12, 6, 0]
+  snr_db_augment: [6, 20]
+
+  # DO NOT USE the pre-built noisy records 118e* and 119e*.
+  # Verified all 12 of them are records 118 and 119, which are
+  # BOTH DS1 (training) records. Evaluating on them is leakage.
+  forbidden_prebuilt: [118e00, 118e06, 118e12, 118e18, 118e24, 118e_6,
+                       119e00, 119e06, 119e12, 119e18, 119e24, 119e_6]
+
+    

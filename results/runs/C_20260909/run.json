@@ -1,0 +1,151 @@
+{
+  "arm": "C",
+  "seed": 20260909,
+  "device": "mps",
+  "epochs_run": 23,
+  "best_epoch": 8,
+  "seconds": 18.0,
+  "parameters": 35908,
+  "class_weights": [
+    0.0723,
+    1.4456,
+    1.0366,
+    1.4456
+  ],
+  "validation": {
+    "accuracy": 0.9053337056688076,
+    "macro_f1": 0.49517126070295553,
+    "macro_f1_nsv": 0.6540555080977678,
+    "per_class": {
+      "N": {
+        "precision": 0.9811469857755701,
+        "recall": 0.9395675675675675,
+        "f1": 0.9599072233267064,
+        "support": 9250
+      },
+      "S": {
+        "precision": 0.11170212765957446,
+        "recall": 0.358974358974359,
+        "f1": 0.17038539553752532,
+        "support": 234
+      },
+      "V": {
+        "precision": 0.9082217973231358,
+        "recall": 0.7673667205169629,
+        "f1": 0.8318739054290718,
+        "support": 1238
+      },
+      "F": {
+        "precision": 0.011494252873563218,
+        "recall": 0.047619047619047616,
+        "f1": 0.018518518518518517,
+        "support": 21
+      }
+    },
+    "confusion": [
+      [
+        8691,
+        543,
+        6,
+        10
+      ],
+      [
+        63,
+        84,
+        85,
+        2
+      ],
+      [
+        89,
+        125,
+        950,
+        74
+      ],
+      [
+        15,
+        0,
+        5,
+        1
+      ]
+    ]
+  },
+  "config": {
+    "arms": {
+      "channels": 5,
+      "length": 128,
+      "slice": true
+    },
+    "architecture": {
+      "kernel_size": 5,
+      "padding": 2,
+      "blocks": [
+        [
+          16,
+          0
+        ],
+        [
+          32,
+          2
+        ],
+        [
+          64,
+          2
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "final_pool": 2,
+      "n_classes": 4
+    },
+    "training": {
+      "optimizer": "adam",
+      "lr": 0.001,
+      "lr_schedule": "cosine",
+      "batch_size": 256,
+      "max_epochs": 100,
+      "early_stopping_patience": 15,
+      "loss": "weighted_cross_entropy",
+      "class_weight": "inverse_frequency",
+      "class_weight_cap": 20,
+      "selection_metric": "macro_f1_nsv",
+      "seeds": [
+        20260906,
+        20260907,
+        20260908,
+        20260909,
+        20260910
+      ]
+    },
+    "augmentation": {
+      "amplitude_scale": [
+        0.9,
+        1.1
+      ],
+      "time_shift_samples": 4,
+      "p_apply": 0.5
+    },
+    "segmentation": {
+      "pre": 48,
+      "post": 80,
+      "length": 128,
+      "store_pre": 96,
+      "store_post": 160,
+      "store_length": 256
+    },
+    "val_records": [
+      223,
+      124,
+      201,
+      106,
+      112
+    ]
+  },
+  "environment": {
+    "python": "3.14.2",
+    "torch": "2.14.0",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "finished_utc": "2026-10-17T18:40:21+00:00"
+  }
+}

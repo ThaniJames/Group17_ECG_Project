@@ -1,0 +1,14 @@
+class       prec  recall      f1  support
+N          0.969   0.982   0.975    9,250
+S          0.278   0.278   0.278      234
+V          0.919   0.824   0.869    1,238
+F          0.000   0.000   0.000       21
+                                         
+accuracy 0.9464   macro-F1 0.5305   macro-F1(N/S/V) 0.7074
+
+confusion (rows = true, cols = predicted)
+                N        S        V        F
+N           9,082      142        2       24
+S              88       65       81        0
+V             187       27    1,020        4
+F              14        0        7        0

@@ -53,7 +53,7 @@ print(f"   amplitude        min {w.min():+.2f}   max {w.max():+.2f}   "
       f"clip at {CFG['normalisation']['clip']}  ->  {100*np.mean(np.abs(w)>=CFG['normalisation']['clip']-1e-6):.4f}% clipped")
 nmask = d["labels"] == 0
 print(f"   R-peak index     median {int(np.median(np.argmax(np.abs(w[nmask]), axis=1)))}  "
-      f"(N beats; target {CFG['segmentation']['pre']})")
+      f"(N beats; target {CFG['segmentation']['store_pre']})")
 print(f"   RR seconds       prev {np.median(d['rr_prev']):.2f}   next {np.median(d['rr_next']):.2f}   "
       f"local {np.median(d['rr_local']):.2f}   NaN {int(np.isnan(d['rr_prev']).sum())}")
 print()

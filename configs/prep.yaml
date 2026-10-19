@@ -56,6 +56,12 @@ segmentation:
   post: 80                    
   length: 128
 
+  # 0.533 s before - What beats.npz holds
+  store_pre: 96
+  # 0.889 s after
+  store_post: 160
+  store_length: 256
+
 rr:
   # beats used for the running local RR median.  
   local_window: 4             
