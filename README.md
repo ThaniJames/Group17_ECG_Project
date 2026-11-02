@@ -11,6 +11,7 @@ for the Analog Devices MAX78002 Edge-AI accelerator, following CRISP-DM.
 | Model and training | [`src/model.py`](src/model.py), [`src/train.py`](src/train.py) |
 | Generated statistics | [`results/`](results/) |
 | Training runs | [`results/runs/`](results/runs/) |
+| MAX78002 deployment | [`max78002/`](max78002/) |
 
 ---
 
@@ -175,6 +176,63 @@ excluded from that figure because a recall of 0 or 1 out of 2 carries no informa
 
 ---
 
+## MAX78002 deployment
+
+The selected model (B2) is retrained, quantized and synthesized with Analog Devices'
+[ai8x-training](https://github.com/analogdevicesinc/ai8x-training) and
+[ai8x-synthesis](https://github.com/analogdevicesinc/ai8x-synthesis). These tools run on Linux
+(on Windows, inside WSL2) in their own Python environment, separate from `.venv`. Install them as
+described in the ai8x-training README, with both repositories in one folder:
+
+```
+<AI8X>/ai8x-training/
+<AI8X>/ai8x-synthesis/
+<AI8X>/.venv/
+```
+
+Then, from the project root, with `data/processed/beats.npz` already prepared:
+
+```bash
+export AI8X=/path/to/ai8x VENV=$AI8X/.venv     # defaults: /root/max78002, $AI8X/.venv
+bash max78002/run_toolchain.sh all              # or one stage at a time, in this order:
+bash max78002/run_toolchain.sh install          #   copy model, data loader, policies, YAML, beats.npz
+bash max78002/run_toolchain.sh train            #   60 FP32 epochs + 40 QAT epochs, ~5 min on a GPU
+bash max78002/run_toolchain.sh quantize         #   INT8 checkpoint
+bash max78002/run_toolchain.sh evaluate         #   simulated 8-bit evaluation on the validation records
+bash max78002/run_toolchain.sh synth            #   C code for the MAX78002
+python max78002/verify_toolchain.py             # independent checks, run with the ai8x environment
+```
+
+The data loader (`max78002/model_configuration/ecg.py`) keeps the same five validation records,
+class weights and training-only augmentation as `src/dataset.py`. It replaces ai8x's random
+beat-level validation split with the record-level one, and refuses to load DS2 for training. Inputs
+are divided by 4 to map the normalised range [−4, 4] onto the accelerator's 8-bit input.
+
+| | |
+|---|---|
+| Hardware layers | 6 — 4 × Conv1d (pooling fused), 1 × MaxPool4, 1 × Linear 512→4 |
+| Parameters | 35,588 |
+| Weight memory | 35,408 B of 2,396,160 B (1.5 %) + 180 B bias |
+| Compute | 1,660,928 MACs per beat |
+| Validation, simulated INT8 | accuracy 0.944, macro-F1(N/S/V) 0.681 — identical to the QAT model |
+
+The last line is on the five validation records, not DS2. `verify_toolchain.py` passes 11 checks
+(`max78002/synthesis_output/verification.txt`), including that the synthesizer's own simulation of
+the generated network is bit-exact with the PyTorch INT8 logits for 40 validation beats of all four
+classes. All results are software verified; no board was used.
+
+```
+max78002/
+    run_toolchain.sh        install | train | quantize | evaluate | synth | all
+    verify_toolchain.py     independent checks of the port
+    model_configuration/    ai87ecgnet.py (model) · ecg.py (data loader) · ecg-b2.yaml (network)
+                            qat_policy_ecg.yaml · schedule_ecg.yaml · sample_ecg.npy
+    quantization_output/    training log + QAT checkpoint · INT8 checkpoint · quantize and evaluation logs
+    synthesis_output/       ecg_b2/ (cnn.c, cnn.h, weights.h, main.c, ... , log.txt) · verification.txt
+```
+
+---
+
 ## Changing the train/validation split
 
 Edit one line in [`configs/prep.yaml`](configs/prep.yaml):
@@ -304,6 +362,7 @@ src/             io_utils.py (loader) · prepare_data.py (pipeline) · data_audi
                  evaluate.py · noise_test.py
 scripts/         run_prepare.py · verify_alignment.py
 results/         generated statistics · runs/ (ablation) · cv2/ (cross-validation) · sweep/
+max78002/        ai8x model configuration, quantization and synthesis output (report section 6)
 figures/         generated figures
 data/            PhysioNet data and processed arrays — not included, see above
 run.sh           sets up .venv, then runs scripts/run_prepare.py
