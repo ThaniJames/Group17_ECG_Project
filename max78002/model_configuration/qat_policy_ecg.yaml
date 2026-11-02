@@ -1,0 +1,4 @@
+---
+# FP32 for 60 epochs (matches the ~60-epoch convergence of src/train.py), then 8-bit QAT
+start_epoch: 60
+weight_bits: 8

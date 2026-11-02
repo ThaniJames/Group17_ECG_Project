@@ -1,0 +1,15 @@
+Configuring device: MAX78002
+Converting checkpoint file /mnt/c/Visa/Masters/Year 2/Advanced Data Mining/Project_gitconfig/Group17_ECG_Project/max78002/quantization_output/training_log/ecg_b2_qat_best.pth.tar to /root/max78002/ai8x-synthesis/trained/ai87-ecg-b2-qat8-q.pth.tar
+
+Model keys (state_dict):
+conv1.output_shift, conv1.activation_threshold, conv1.final_scale, conv1.weight_bits, conv1.bias_bits, conv1.quantize_activation, conv1.clamp_activation, conv1.adjust_output_shift, conv1.shift_quantile, conv1.op.weight, conv1.op.bias, conv2.output_shift, conv2.activation_threshold, conv2.final_scale, conv2.weight_bits, conv2.bias_bits, conv2.quantize_activation, conv2.clamp_activation, conv2.adjust_output_shift, conv2.shift_quantile, conv2.op.weight, conv2.op.bias, conv3.output_shift, conv3.activation_threshold, conv3.final_scale, conv3.weight_bits, conv3.bias_bits, conv3.quantize_activation, conv3.clamp_activation, conv3.adjust_output_shift, conv3.shift_quantile, conv3.op.weight, conv3.op.bias, conv4.output_shift, conv4.activation_threshold, conv4.final_scale, conv4.weight_bits, conv4.bias_bits, conv4.quantize_activation, conv4.clamp_activation, conv4.adjust_output_shift, conv4.shift_quantile, conv4.op.weight, conv4.op.bias, pool.output_shift, pool.activation_threshold, pool.final_scale, pool.weight_bits, pool.bias_bits, pool.quantize_activation, pool.clamp_activation, pool.adjust_output_shift, pool.shift_quantile, fc.output_shift, fc.activation_threshold, fc.final_scale, fc.weight_bits, fc.bias_bits, fc.quantize_activation, fc.clamp_activation, fc.adjust_output_shift, fc.shift_quantile, fc.op.weight, fc.op.bias
+conv1.op.weight avg_max: 0.41729072 max: 0.9787449 mean: 0.06942963 factor: [128.] bits: 8
+conv1.op.bias avg_max: 0.014045592 max: 0.44610807 mean: -0.014045592 factor: [128.] bits: 8
+conv2.op.weight avg_max: 0.48483056 max: 1.4730006 mean: -0.002565107 factor: [64.] bits: 8
+conv2.op.bias avg_max: 0.013816482 max: 0.13398403 mean: 0.013816482 factor: [64.] bits: 8
+conv3.op.weight avg_max: 0.4087181 max: 0.8081405 mean: -0.012703446 factor: [128.] bits: 8
+conv3.op.bias avg_max: 0.009704555 max: 0.13122529 mean: 0.009704555 factor: [128.] bits: 8
+conv4.op.weight avg_max: 0.3658222 max: 1.1883507 mean: -0.018850692 factor: [64.] bits: 8
+conv4.op.bias avg_max: 0.0004915338 max: 0.029195659 mean: 0.0004915338 factor: [64.] bits: 8
+fc.op.weight avg_max: 0.45453733 max: 0.55558705 mean: -0.008228745 factor: [128.] bits: 8
+fc.op.bias avg_max: 0.00079485954 max: 0.0076193465 mean: 0.00079485954 factor: [128.] bits: 8

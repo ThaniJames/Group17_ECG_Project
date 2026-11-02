@@ -1,0 +1,56 @@
+---
+# MAX78002 network description for ai87ecgnet (arm B2), input 1 x 256.
+# Data memory ping-pongs between offset 0 and 0xA000 (half of a MAX78002 instance).
+
+arch: ai87ecgnet
+dataset: ECG
+
+layers:
+  # L0: Conv1d 1->16 k5, 256
+  - processors: 0x0000000000000001
+    data_format: HWC
+    operation: Conv1d
+    kernel_size: 5
+    pad: 2
+    activate: ReLU
+    out_offset: 0xA000
+  # L1: MaxPool2 + Conv1d 16->32 k5, 128
+  - processors: 0x000000000000ffff
+    max_pool: 2
+    pool_stride: 2
+    operation: Conv1d
+    kernel_size: 5
+    pad: 2
+    activate: ReLU
+    out_offset: 0x0000
+  # L2: MaxPool2 + Conv1d 32->64 k5, 64
+  - processors: 0x00000000ffffffff
+    max_pool: 2
+    pool_stride: 2
+    operation: Conv1d
+    kernel_size: 5
+    pad: 2
+    activate: ReLU
+    out_offset: 0xA000
+  # L3: MaxPool2 + Conv1d 64->64 k5, 32
+  - processors: 0xffffffffffffffff
+    max_pool: 2
+    pool_stride: 2
+    operation: Conv1d
+    kernel_size: 5
+    pad: 2
+    activate: ReLU
+    out_offset: 0x0000
+  # L4: MaxPool4 only, 8 (pooling and flatten cannot share a layer)
+  - processors: 0xffffffffffffffff
+    max_pool: 4
+    pool_stride: 4
+    operation: None
+    out_offset: 0xA000
+  # L5: Flatten 64x8 -> Linear 512->4, 32-bit logits
+  - processors: 0xffffffffffffffff
+    flatten: true
+    operation: MLP
+    output_width: 32
+    activate: None
+    out_offset: 0x0000

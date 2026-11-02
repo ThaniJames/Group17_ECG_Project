@@ -1,0 +1,13 @@
+[PASS] architecture: parameter shapes match src/model.py B2  -- 10 tensors, 35,588 parameters
+[PASS] loader: no DS2 beats in training or validation
+[PASS] loader: train and validation records are disjoint  -- val records [106, 112, 124, 201, 223]
+[PASS] loader: train/val sizes match src/dataset.py  -- train 40,223, val 10,743
+[PASS] loader: validation beats/labels/records identical to src/dataset.py  -- max |diff| 0.00e+00
+[PASS] loader: augmentation on train rows only
+[PASS] loader: DS2 refuses to load for training
+[PASS] quantized checkpoint: weights and biases are int8  -- 35,588 values, weight/bias bits {8}
+[PASS] INT8 simulation reproduces train.py -8 confusion matrix  -- macro-F1(N/S/V) 0.6812
+[PASS] synthesis simulation == PyTorch INT8 logits (bit-exact up to fixed scale)  -- 40 beats, scale 0.0625
+[PASS] synthesis simulation predicts the same class as PyTorch  -- classes tested [0, 1, 2, 3]
+
+11/11 checks passed

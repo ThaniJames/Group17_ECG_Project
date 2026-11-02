@@ -1,0 +1,14 @@
+---
+# LR drops when QAT starts (epoch 60) and once more during QAT
+lr_schedulers:
+  training_lr:
+    class: MultiStepLR
+    milestones: [60, 85]
+    gamma: 0.2
+
+policies:
+  - lr_scheduler:
+      instance_name: training_lr
+    starting_epoch: 0
+    ending_epoch: 100
+    frequency: 1
