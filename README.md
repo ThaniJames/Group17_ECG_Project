@@ -5,7 +5,8 @@ for the Analog Devices MAX78002 Edge-AI accelerator, following CRISP-DM.
 
 | | |
 |---|---|
-| Report | [`report.pdf`](report.pdf) |
+| Report | [`reports/Group17_Final_Report.pdf`](reports/Group17_Final_Report.pdf) |
+| Presentation | [slides](PresenationVideo/Group17_ECG_Project.pdf) and [videos](PresenationVideo/) |
 | Exploratory analysis | [`notebooks/EDA.ipynb`](notebooks/EDA.ipynb) |
 | Data preparation | [`src/prepare_data.py`](src/prepare_data.py), [`scripts/run_prepare.py`](scripts/run_prepare.py) |
 | Model and training | [`src/model.py`](src/model.py), [`src/train.py`](src/train.py) |
@@ -173,6 +174,26 @@ beats, it is **0.266 ±0.294**, and across those seven it ranges from 0.000 to 0
 with 106 and 73 S beats are missed entirely. S detection is strongly patient-dependent, and
 `results/cv2/per_record.json` has the full table. Patients with only a handful of S beats are
 excluded from that figure because a recall of 0 or 1 out of 2 carries no information.
+
+---
+
+## Final evaluation on DS2
+
+```bash
+.venv/bin/python scripts/run_noise.py --final      # noisy DS2 datasets (once)
+.venv/bin/python scripts/run_compare.py --final    # FP32 vs INT8 under noise -> results/noise_test/
+.venv/bin/python src/evaluate.py                   # FP32 and INT8 on DS2, about a minute
+```
+
+`src/evaluate.py` tests the five final B2 models and their INT8 copies on all 49,656 DS2 beats.
+It prints the results tables, the S recall for each patient and the success criteria check, and
+saves the numbers to `results/` and the plots to `figures/`. The logistic regression baseline is
+tested separately with `src/evaluate_baseline_logreg.py`.
+
+| DS2, mean ± sd over 5 seeds | FP32 | INT8 |
+|---|---|---|
+| Accuracy | 0.863 ± 0.024 | 0.867 ± 0.024 |
+| Macro-F1 | 0.468 ± 0.027 | 0.470 ± 0.028 |
 
 ---
 
@@ -353,13 +374,13 @@ Two more apply to modelling:
 ## Repository layout
 
 ```
-report.pdf       CRISP-DM report
-reports/         the report sections as written by each member
+reports/         final report (Group17_Final_Report.pdf / .docx) and each member's sections
+PresenationVideo/ presentation slides and recorded videos (final video stored with Git LFS)
 notebooks/       EDA.ipynb — exploratory data analysis (report section 2)
 configs/         prep.yaml (data) · model.yaml (arms, architecture, training)
 src/             io_utils.py (loader) · prepare_data.py (pipeline) · data_audit.py (audit)
                  dataset.py (input arms) · model.py (EdgeCNN) · metrics.py · train.py
-                 evaluate.py · noise_test.py
+                 evaluate.py (final DS2 evaluation) · noise_test.py · quantize.py
 scripts/         run_prepare.py · verify_alignment.py
 results/         generated statistics · runs/ (ablation) · cv2/ (cross-validation) · sweep/
 max78002/        ai8x model configuration, quantization and synthesis output (report section 6)
