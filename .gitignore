@@ -5,3 +5,11 @@ env/
 data/
 __pycache__/
 *.pyc
+
+# editor and OS droppings
+.DS_Store
+Thumbs.db
+~$*.docx
+~$*.pptx
+~$*.xlsx
+.ipynb_checkpoints/
